@@ -1,0 +1,9 @@
+from typing import Protocol
+
+
+class AgentProvider(Protocol):
+    name: str
+
+    def generate_plan(self, task: dict) -> list[dict]: ...
+    def generate_code(self, task: dict, plan: list[dict]) -> dict: ...
+    def review_code(self, diff: str) -> list[dict]: ...

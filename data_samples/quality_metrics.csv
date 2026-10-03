@@ -1,0 +1,6 @@
+date,test_pass_rate,lint_failures,agent_success_rate,average_task_seconds,rollbacks
+2026-09-29,100,0,100,24,0
+2026-09-30,96,1,92,31,0
+2026-10-01,100,0,100,19,0
+2026-10-02,92,1,88,37,1
+2026-10-03,100,0,100,22,0

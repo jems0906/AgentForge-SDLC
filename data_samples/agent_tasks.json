@@ -1,0 +1,7 @@
+[
+  {"title":"Add lease renewal reminder endpoint","description":"Notify property managers when a lease enters the 60-day renewal window.","task_type":"feature"},
+  {"title":"Fix maintenance ticket priority bug","description":"Normalize incoming priority values and reject unsupported levels.","task_type":"bugfix"},
+  {"title":"Refactor rent payment validation","description":"Make payment amount rules explicit and cover boundary cases.","task_type":"refactor"},
+  {"title":"Add notification service test coverage","description":"Cover the inclusive lease renewal notice window.","task_type":"test"},
+  {"title":"Integrate third-party payment provider API","description":"Propose a clear adapter boundary for payment provider integration.","task_type":"integration"}
+]

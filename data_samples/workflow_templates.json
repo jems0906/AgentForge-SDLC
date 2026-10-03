@@ -1,0 +1,5 @@
+[
+  {"id":"feature","name":"Feature delivery","steps":["plan","implement","test","review","approval"]},
+  {"id":"bugfix","name":"Bug fix","steps":["reproduce","patch","test","review","approval"]},
+  {"id":"refactor","name":"Refactor","steps":["risk_analysis","refactor","test","review","approval"]}
+]
