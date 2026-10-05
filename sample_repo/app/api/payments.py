@@ -1,13 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from app.database import get_db
 from app.models import Lease, RentPayment
 from app.schemas import PaymentInput, PaymentRead
 from app.services.payment_validation import validate_rent_payment
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 

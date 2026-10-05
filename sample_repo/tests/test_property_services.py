@@ -1,7 +1,6 @@
 from datetime import date
 
 import pytest
-
 from app.services.maintenance import normalize_priority
 from app.services.notification_service import lease_renewal_due
 from app.services.payment_validation import validate_rent_payment

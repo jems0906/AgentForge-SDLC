@@ -1,7 +1,6 @@
-from fastapi import FastAPI
-
 from app.api import leases, maintenance, payments, properties, tenants
 from app.database import initialize_database
+from fastapi import FastAPI
 
 app = FastAPI(title="Hearthside Property API", version="0.1.0")
 initialize_database()

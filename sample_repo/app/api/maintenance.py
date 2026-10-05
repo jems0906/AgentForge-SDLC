@@ -1,13 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from app.database import get_db
 from app.models import MaintenanceTicket, Property
 from app.schemas import TicketInput, TicketRead
 from app.services.maintenance import normalize_priority
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/maintenance", tags=["maintenance"])
 

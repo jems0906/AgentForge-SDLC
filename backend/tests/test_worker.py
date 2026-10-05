@@ -1,5 +1,5 @@
 def test_worker_processes_task_through_review(client):
-    task = client.post("/api/tasks", json={"title": "Add lease renewal reminder"}).json()
+    task = client.post("/api/tasks", json={"title": "Add vendor gateway contract"}).json()
 
     from worker.task_runner import process_one
 
@@ -19,7 +19,7 @@ def test_worker_processes_task_through_review(client):
 
 
 def test_worker_blocks_review_when_sandbox_validation_fails(client, monkeypatch):
-    task = client.post("/api/tasks", json={"title": "Add lease renewal reminder"}).json()
+    task = client.post("/api/tasks", json={"title": "Add vendor gateway contract"}).json()
     monkeypatch.setattr(
         "worker.task_runner.execute",
         lambda *args, **kwargs: {

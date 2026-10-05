@@ -1,14 +1,13 @@
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from app.database import get_db
 from app.models import Lease, Tenant
 from app.schemas import LeaseInput, LeaseRead
 from app.services.notification_service import lease_renewal_due
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/leases", tags=["leases"])
 
