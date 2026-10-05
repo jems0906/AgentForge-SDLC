@@ -1,12 +1,10 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 
 
-client = TestClient(app)
-
-
-def test_property_management_api_workflow():
+def test_property_management_api_workflow(client):
     property_response = client.post("/properties", json={"name": "Harbor House", "address": "8 Harbor Road", "unit_count": 12})
     assert property_response.status_code == 201
     property_id = property_response.json()["id"]
@@ -27,6 +25,25 @@ def test_property_management_api_workflow():
     assert payment.json()["status"] == "validated"
 
 
-def test_maintenance_rejects_unknown_priority():
-    response = client.post("/maintenance", json={"property_id": 1, "title": "Inspect heater", "priority": "whenever"})
+def test_maintenance_rejects_unknown_priority(client):
+    property_response = client.post("/properties", json={"name": "Harbor House", "address": "8 Harbor Road", "unit_count": 12})
+    property_id = property_response.json()["id"]
+    response = client.post("/maintenance", json={"property_id": property_id, "title": "Inspect heater", "priority": "whenever"})
     assert response.status_code == 422
+
+
+def test_property_is_readable_after_separate_requests(client):
+    created = client.post("/properties", json={"name": "Maple Annex", "address": "2 Maple Lane", "unit_count": 8}).json()
+    listed = client.get("/properties").json()
+    assert any(item["id"] == created["id"] for item in listed)
+
+
+@pytest.fixture
+def client():
+    from app.database import Base, engine
+
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    with TestClient(app) as test_client:
+        yield test_client
+    Base.metadata.drop_all(bind=engine)

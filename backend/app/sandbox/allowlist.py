@@ -1,5 +1,4 @@
 COMMANDS = {
-    "pytest": ["python", "-m", "pytest", "-q"],
+    "pytest": ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider"],
     "ruff check": ["ruff", "check", "."],
-    "python -m compileall": ["python", "-m", "compileall", "-q", "."],
 }

@@ -13,6 +13,18 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
+  sandbox-base:
+    image: agentforge-sample-runner:latest
+    build:
+      context: .
+      dockerfile: sample_repo/Dockerfile.sandbox-base
+    command: ["python", "-c", "import time; time.sleep(86400)"]
+    network_mode: none
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges"]
+    pids_limit: 16
+
   api:
     build:
       context: .
@@ -21,12 +33,17 @@ services:
       APP_ENV: production
       DATABASE_URL: postgresql+psycopg://agentforge:local-only-password@db:5432/agentforge
       CORS_ORIGINS: http://localhost:3000
+      SANDBOX_MODE: docker
     command: ["sh", "-c", "alembic -c /app/alembic.ini upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
+      sandbox-base:
+        condition: service_started
 
   worker:
     build:
@@ -35,9 +52,14 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://agentforge:local-only-password@db:5432/agentforge
       WORKER_POLL_SECONDS: 2
+      SANDBOX_MODE: docker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       db:
         condition: service_healthy
+      sandbox-base:
+        condition: service_started
 
   frontend:
     build:

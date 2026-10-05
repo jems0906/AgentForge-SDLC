@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 
 from app.api import leases, maintenance, payments, properties, tenants
-
+from app.database import initialize_database
 
 app = FastAPI(title="Hearthside Property API", version="0.1.0")
+initialize_database()
 app.include_router(properties.router)
 app.include_router(tenants.router)
 app.include_router(leases.router)

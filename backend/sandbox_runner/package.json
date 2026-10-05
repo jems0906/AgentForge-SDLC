@@ -1,0 +1,8 @@
+{
+  "name": "agentforge-railway-sandbox-runner",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "railway": "^3.12.0"
+  }
+}

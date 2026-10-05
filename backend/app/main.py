@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timezone
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -7,6 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.config import APP_ENV
 from app.database import Base, engine, get_db
+from app.integrations.github import is_configured as github_configured, merge_pull_request
+from app.integrations.railway import deploy as railway_deploy, is_configured as railway_configured, rollback as railway_rollback
 from app.models import AgentTask, CodeReview, QualityMetric, SandboxExecution, WorkflowExecution
 from app.providers import get_provider
 from app.sandbox.allowlist import COMMANDS
@@ -34,13 +37,24 @@ def health():
 
 @app.get("/api/providers")
 def list_providers():
-    import os
     return [
         {"id": "mock", "name": "Mock provider", "configured": True, "default": True},
         {"id": "anthropic", "name": "Anthropic Claude", "configured": bool(os.getenv("ANTHROPIC_API_KEY")), "default": False},
         {"id": "openai", "name": "OpenAI", "configured": bool(os.getenv("OPENAI_API_KEY")), "default": False},
         {"id": "gemini", "name": "Google Gemini", "configured": bool(os.getenv("GEMINI_API_KEY")), "default": False},
     ]
+
+
+@app.get("/api/integrations")
+def integration_status():
+    return {
+        "github": {"configured": github_configured(), "repository": os.getenv("GITHUB_REPOSITORY")},
+        "railway": {"configured": railway_configured(), "service_id": os.getenv("RAILWAY_SERVICE_ID")},
+        "sandbox": {
+            "configured": os.getenv("SANDBOX_MODE", "railway" if APP_ENV == "production" else "docker") == "docker" or bool(os.getenv("RAILWAY_PROJECT_TOKEN")),
+            "mode": "railway-sandbox" if os.getenv("SANDBOX_MODE", "railway" if APP_ENV == "production" else "docker") == "railway" and os.getenv("RAILWAY_PROJECT_TOKEN") else "not-configured" if os.getenv("SANDBOX_MODE", "railway" if APP_ENV == "production" else "docker") == "railway" else "local-docker",
+        },
+    }
 
 
 @app.get("/api/workflows")
@@ -57,6 +71,9 @@ def list_workflow_runs(db: Session = Depends(get_db)):
 @app.post("/api/tasks", response_model=TaskRead, status_code=201)
 @app.post("/api/agents/run", response_model=TaskRead, status_code=201)
 def create_task(payload: TaskCreate, db: Session = Depends(get_db)):
+    sandbox_mode = os.getenv("SANDBOX_MODE", "railway" if APP_ENV == "production" else "docker")
+    if sandbox_mode == "railway" and not os.getenv("RAILWAY_PROJECT_TOKEN"):
+        raise HTTPException(status_code=503, detail="Configure RAILWAY_PROJECT_TOKEN before queueing cloud tasks.")
     try:
         get_provider(payload.provider)
     except ValueError as error:
@@ -114,12 +131,33 @@ def decide_review(review_id: int, payload: ReviewDecision, db: Session = Depends
     task = db.get(AgentTask, review.task_id)
     if payload.decision == "approve" and task and task.outputs.get("tests", {}).get("status") != "passed":
         raise HTTPException(status_code=409, detail="Approval requires a passing sandbox test run")
+    integration_result = {}
+    try:
+        if payload.decision == "merge":
+            if not github_configured():
+                raise RuntimeError("Configure GitHub credentials before merging a review.")
+            if task is None or not task.outputs.get("github"):
+                raise RuntimeError("No GitHub pull request was created for this task.")
+            pull_request = task.outputs.get("github")
+            integration_result["github_merge"] = merge_pull_request(pull_request)
+        elif payload.decision == "deploy":
+            if not railway_configured():
+                raise RuntimeError("Configure Railway token, project, environment, and service IDs before deployment.")
+            integration_result["railway_deployment"] = railway_deploy()
+        elif payload.decision == "rollback":
+            if not railway_configured():
+                raise RuntimeError("Configure Railway token, project, environment, and service IDs before rollback.")
+            integration_result["railway_rollback"] = railway_rollback()
+    except RuntimeError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
     transitions = {"approve": "approved", "request_changes": "changes_requested", "reject": "rejected", "merge": "merged", "deploy": "deployed", "rollback": "rolled_back"}
     review.status = transitions[payload.decision]
     if payload.note:
         review.comments = [*review.comments, {"severity": "human", "comment": payload.note}]
     if task:
         task.status = review.status
+        if integration_result:
+            task.outputs = {**task.outputs, **integration_result}
         if payload.decision == "request_changes":
             task.outputs = {**task.outputs, "change_request": payload.note}
             task.description = f"{task.description}\n\nRequested changes: {payload.note}"[:8000]

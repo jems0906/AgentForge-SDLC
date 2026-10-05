@@ -56,10 +56,10 @@ class RemoteProvider:
         return self._json(text, {"steps": [{"title": "Review provider response", "detail": text[:1000]}]}).get("steps", [])
 
     def generate_code(self, task: dict, plan: list[dict]) -> dict:
-        prompt = f"Return only JSON with string keys summary and diff and array files_changed. Produce a unified diff proposal only; never claim files were changed or that code was executed. The diff is for human review and must not contain secrets. Task: {json.dumps(task)} Plan: {json.dumps(plan)}"
+        prompt = f"Return only JSON with a string summary and a files array of {{path, content}} entries. Each content value must be the complete updated Python file. Paths must be relative to the sample repository and limited to app/ or tests/. Do not use absolute paths, parent traversal, symlinks, shell scripts, or binary data. Make a focused change using the supplied source context. Task: {json.dumps(task)} Plan: {json.dumps(plan)}"
         text = self._complete(prompt)
-        result = self._json(text, {"summary": f"{self.name} proposed a change for review", "diff": text, "files_changed": []})
-        return {"summary": str(result.get("summary", "Change proposal")), "diff": str(result.get("diff", "")), "files_changed": result.get("files_changed", [])}
+        result = self._json(text, {"summary": f"{self.name} proposed a change for review", "files": []})
+        return {"summary": str(result.get("summary", "Change proposal")), "files": result.get("files", [])}
 
     def review_code(self, diff: str) -> list[dict]:
         prompt = f"Review this proposed unified diff. Return only JSON: {{\"comments\":[{{\"severity\":\"info|warning|error\",\"file\":string,\"line\":number|null,\"comment\":string}}]}}. Be specific and do not assert tests ran. Diff:\n{diff[:12000]}"

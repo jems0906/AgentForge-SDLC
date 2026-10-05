@@ -1,24 +1,25 @@
-from fastapi import APIRouter
-from pydantic import BaseModel, Field
+from typing import Annotated
 
+from fastapi import APIRouter, Depends
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.models import Property
+from app.schemas import PropertyInput, PropertyRead
 
 router = APIRouter(prefix="/properties", tags=["properties"])
-PROPERTIES = [{"id": 1, "name": "Maple Court", "address": "18 Maple Street", "unit_count": 24}]
 
 
-class PropertyInput(BaseModel):
-    name: str = Field(min_length=2, max_length=120)
-    address: str = Field(min_length=5, max_length=240)
-    unit_count: int = Field(ge=1, le=5000)
+@router.get("", response_model=list[PropertyRead])
+def list_properties(db: Annotated[Session, Depends(get_db)]):
+    return db.scalars(select(Property).order_by(Property.id)).all()
 
 
-@router.get("")
-def list_properties():
-    return PROPERTIES
-
-
-@router.post("", status_code=201)
-def create_property(payload: PropertyInput):
-    property_record = {"id": max((item["id"] for item in PROPERTIES), default=0) + 1, **payload.model_dump()}
-    PROPERTIES.append(property_record)
+@router.post("", response_model=PropertyRead, status_code=201)
+def create_property(payload: PropertyInput, db: Annotated[Session, Depends(get_db)]):
+    property_record = Property(**payload.model_dump())
+    db.add(property_record)
+    db.commit()
+    db.refresh(property_record)
     return property_record

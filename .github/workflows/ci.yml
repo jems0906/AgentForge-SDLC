@@ -13,6 +13,8 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -r backend/requirements.txt
+      - run: docker build --tag agentforge-sample-runner:latest --file sample_repo/Dockerfile.sandbox-base .
+      - run: python -m ruff check sample_repo
       - run: python -m pytest -q backend/tests
         env:
           PYTHONPATH: backend
